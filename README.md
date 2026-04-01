@@ -52,3 +52,6 @@ A new POST route, /save_client, was added in version 1.1 to handle saving or upd
 
 APP_V_1_1_2
 Added Client List, Progress Report in website
+
+APP_V_2_0_1
+Introduces automatic calorie calculation logic
