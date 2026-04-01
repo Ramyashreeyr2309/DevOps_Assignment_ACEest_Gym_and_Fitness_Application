@@ -1,62 +1,99 @@
 import sqlite3
-from flask import Flask, render_template, request, jsonify, redirect, url_for
-from datetime import datetime
+import io
+from flask import Flask, render_template, request, redirect, url_for, flash, send_file, jsonify
+from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+from fpdf import FPDF
+import random
 
 app = Flask(__name__)
-DB_NAME = "aceest_fitness.db"
+app.secret_key = "aceest_premium_secret_key"
 
-# Core Program Logic from v3.0.1
-PROGRAMS = {
-    "Fat Loss (FL)": {"factor": 22},
-    "Muscle Gain (MG)": {"factor": 35},
-    "Beginner (BG)": {"factor": 26}
-}
+# --- Authentication Setup ---
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = "login"
 
-def get_db():
-    conn = sqlite3.connect(DB_NAME)
+class User(UserMixin):
+    def __init__(self, id, username, role):
+        self.id = id
+        self.username = username
+        self.role = role
+
+def get_db_connection():
+    db_path = app.config.get('DATABASE', 'aceest_fitness.db')
+    conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     return conn
 
+@login_manager.user_loader
+def load_user(user_id):
+    db = get_db_connection()
+    user = db.execute("SELECT * FROM users WHERE username = ?", (user_id,)).fetchone()
+    if user:
+        return User(user['username'], user['username'], user['role'])
+    return None
+
+# --- Application Routes ---
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        db = get_db_connection()
+        user = db.execute("SELECT * FROM users WHERE username=? AND password=?", (username, password)).fetchone()
+        if user:
+            user_obj = User(user['username'], user['username'], user['role'])
+            login_user(user_obj)
+            return redirect(url_for('dashboard'))
+        flash("Invalid credentials. Access denied.")
+    return render_template('login.html')
+
 @app.route('/')
+@login_required
 def dashboard():
-    db = get_db()
-    clients = db.execute("SELECT * FROM clients").fetchall()
-    return render_template('index.html', clients=clients, programs=PROGRAMS.keys())
+    db = get_db_connection()
+    if current_user.role == "Admin":
+        clients = db.execute("SELECT * FROM clients").fetchall()
+        return render_template('dashboard.html', clients=clients)
+    else:
+        client = db.execute("SELECT * FROM clients WHERE name = ?", (current_user.username,)).fetchone()
+        return render_template('dashboard.html', client=client)
 
-@app.route('/api/save_client', methods=['POST'])
-def save_client():
-    data = request.json
-    weight = float(data['weight'])
-    program = data['program']
-    calories = int(weight * PROGRAMS.get(program, {"factor": 25})['factor'])
+@app.route('/api/generate_workout/<program>')
+@login_required
+def generate_workout(program):
+    # Logic from your AI workout generation method
+    exercises = {
+        "Fat Loss (FL)": ["Burpees", "Mountain Climbers", "Kettlebell Swings"],
+        "Muscle Gain (MG)": ["Bench Press", "Squats", "Deadlifts"]
+    }
+    selected = exercises.get(program, ["Pushups", "Plank"])
+    workout = [{"exercise": ex, "sets": random.randint(3, 5), "reps": random.randint(8, 15)} for ex in selected]
+    return jsonify(workout)
 
-    db = get_db()
-    db.execute("""
-        INSERT INTO clients (name, age, weight, program, calories)
-        VALUES (?, ?, ?, ?, ?)
-        ON CONFLICT(name) DO UPDATE SET
-        weight=excluded.weight, program=excluded.program, calories=excluded.calories
-    """, (data['name'], data['age'], weight, program, calories))
-    db.commit()
-    return jsonify({"status": "success", "calories": calories})
+@app.route('/export_pdf/<client_name>')
+@login_required
+def export_pdf(client_name):
+    db = get_db_connection()
+    row = db.execute("SELECT * FROM clients WHERE name=?", (client_name,)).fetchone()
+    
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", "B", 16)
+    pdf.cell(0, 10, f"ACEest Fitness Report: {client_name}", ln=True, align="C")
+    pdf.set_font("Arial", "", 12)
+    pdf.ln(10)
+    pdf.cell(0, 10, f"Program: {row['program']}", ln=True)
+    pdf.cell(0, 10, f"Current Weight: {row['weight']} kg", ln=True)
+    
+    return send_file(io.BytesIO(pdf.output(dest='S').encode('latin-1')), 
+                     download_name=f"{client_name}_report.pdf", as_attachment=True)
 
-@app.route('/history/<client_name>')
-def view_history(client_name):
-    db = get_db()
-    # Replicates the Workout History Treeview logic
-    history = db.execute("""
-        SELECT date, workout_type, duration_min, notes 
-        FROM workouts WHERE client_name=? ORDER BY date DESC
-    """, (client_name,)).fetchall()
-    return render_template('history.html', client=client_name, history=history)
-
-@app.route('/api/progress/<name>')
-def get_progress(name):
-    db = get_db()
-    # Data for the Matplotlib-style chart
-    rows = db.execute("SELECT week, adherence FROM progress WHERE client_name=? ORDER BY id", (name,)).fetchall()
-    return jsonify([dict(row) for row in rows])
+@app.route('/logout')
+def logout():
+    logout_user()
+    return redirect(url_for('login'))
 
 if __name__ == '__main__':
-    # host='0.0.0.0' is required for Docker connectivity
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=True)

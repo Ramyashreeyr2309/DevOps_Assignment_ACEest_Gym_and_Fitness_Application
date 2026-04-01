@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ACEest | Premium Login</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --gold: #d4af37;
+            --gold-glow: rgba(212, 175, 55, 0.3);
+            --bg-dark: #0a0a0a;
+            --card-bg: #161616;
+            --input-bg: #222222;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-dark);
+            color: #ffffff;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        /* Subtle Background Animation */
+        body::before {
+            content: "";
+            position: absolute;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, #1a1a1a 0%, #0a0a0a 70%);
+            z-index: -1;
+        }
+
+        .login-card {
+            background: var(--card-bg);
+            width: 100%;
+            max-width: 420px;
+            padding: 50px;
+            border-radius: 20px;
+            border: 1px solid #333;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+            text-align: center;
+            position: relative;
+        }
+
+        .login-card::after {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 2px;
+            background: linear-gradient(90deg, transparent, var(--gold), transparent);
+        }
+
+        .brand-logo {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--gold);
+            letter-spacing: 6px;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+        }
+
+        .sub-text {
+            color: #666;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 40px;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+            text-align: left;
+        }
+
+        label {
+            display: block;
+            font-size: 11px;
+            color: var(--gold);
+            text-transform: uppercase;
+            font-weight: 700;
+            margin-bottom: 8px;
+            padding-left: 5px;
+        }
+
+        input {
+            width: 100%;
+            padding: 14px 18px;
+            background: var(--input-bg);
+            border: 1px solid #333;
+            border-radius: 8px;
+            color: white;
+            font-size: 15px;
+            transition: all 0.3s ease;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--gold);
+            box-shadow: 0 0 10px var(--gold-glow);
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 16px;
+            background: var(--gold);
+            color: #000;
+            border: none;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+
+        .login-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(212, 175, 55, 0.4);
+        }
+
+        /* Error Message Styling */
+        .alert {
+            background: rgba(231, 76, 60, 0.1);
+            border: 1px solid #e74c3c;
+            color: #e74c3c;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 25px;
+            font-size: 13px;
+        }
+
+        .footer-note {
+            margin-top: 40px;
+            font-size: 11px;
+            color: #444;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="login-card">
+        <div class="brand-logo">ACEest</div>
+        <div class="sub-text">Fitness & Performance v3.2.4</div>
+
+        {% with messages = get_flashed_messages() %}
+          {% if messages %}
+            {% for message in messages %}
+              <div class="alert">{{ message }}</div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        <form action="/login" method="POST">
+            <div class="form-group">
+                <label for="username">System Identity</label>
+                <input type="text" id="username" name="username" placeholder="Username" required autofocus>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Security Key</label>
+                <input type="password" id="password" name="password" placeholder="••••••••" required>
+            </div>
+
+            <button type="submit" class="login-btn">Initialize Access</button>
+        </form>
+
+        <div class="footer-note">
+            RESTRICTED ACCESS AREA &bull; ACEEST PERFORMANCE &copy; 2026
+        </div>
+    </div>
+
+    <script>
+        // Simple loading state on click
+        const btn = document.querySelector('.login-btn');
+        btn.addEventListener('click', function() {
+            if (document.querySelector('input:invalid') === null) {
+                this.innerHTML = "Authenticating...";
+                this.style.opacity = "0.7";
+            }
+        });
+    </script>
+</body>
+</html>
