@@ -61,3 +61,6 @@ Added new featues to code
 
 APP_V2.2.1
 Added a new GET route, /get_progress, allowing the frontend to fetch and display the history of a client's weekly adherence logs.
+
+APP_V2.2.4
+Transition from a simple information-display tool to a data-driven tracking system with automated calculations and API-oriented architecture.
