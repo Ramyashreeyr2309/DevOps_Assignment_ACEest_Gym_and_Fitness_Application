@@ -1,74 +1,102 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>ACEest Fitness v2.1.2</title>
+    <title>ACEest Fitness v2.2.1</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { background: #1a1a1a; color: white; font-family: 'Segoe UI', sans-serif; padding: 40px; }
-        .card { background: #262626; border: 2px solid #d4af37; padding: 25px; border-radius: 10px; max-width: 600px; margin: auto; }
-        h1 { color: #d4af37; text-align: center; margin-top: 0; }
-        .input-group { margin-bottom: 15px; }
-        label { display: block; color: #d4af37; margin-bottom: 5px; }
-        input, select { width: 100%; padding: 10px; background: #333; border: 1px solid #444; color: white; border-radius: 5px; box-sizing: border-box;}
-        button { width: 100%; padding: 12px; background: #d4af37; color: black; border: none; font-weight: bold; cursor: pointer; border-radius: 5px; margin-top: 10px; }
-        .progress-section { margin-top: 30px; border-top: 1px solid #444; padding-top: 20px; }
+        body { background: #1a1a1a; color: white; font-family: sans-serif; padding: 20px; }
+        .container { max-width: 900px; margin: auto; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .card { background: #262626; border: 1px solid #d4af37; padding: 20px; border-radius: 10px; }
+        h2 { color: #d4af37; border-bottom: 1px solid #d4af37; padding-bottom: 10px; }
+        input, select { width: 100%; padding: 8px; margin: 10px 0; background: #333; color: white; border: 1px solid #444; }
+        button { background: #d4af37; color: black; border: none; padding: 10px; width: 100%; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        #chart-container { grid-column: span 2; height: 300px; }
     </style>
 </head>
 <body>
 
-<div class="card">
-    <h1>ACEest PERFORMANCE v2.1.2</h1>
-    
-    <div class="input-group">
-        <label>Full Name</label>
-        <input type="text" id="name">
-    </div>
-    <div class="input-group">
-        <label>Age</label>
-        <input type="number" id="age">
-    </div>
-    <div class="input-group">
-        <label>Weight (kg)</label>
-        <input type="number" id="weight">
-    </div>
-    <div class="input-group">
-        <label>Target Program</label>
-        <select id="program">
-            {% for p in programs %}
-            <option value="{{ p }}">{{ p }}</option>
-            {% endfor %}
-        </select>
-    </div>
-    <button onclick="sendData('/save_client')">Save Client Profile</button>
+<h1 style="text-align:center; color:#d4af37;">ACEest PERFORMANCE v2.2.1</h1>
 
-    <div class="progress-section">
-        <h3>Weekly Adherence Log</h3>
-        <div class="input-group">
-            <label>Adherence (%)</label>
-            <input type="range" id="adherence" min="0" max="100" value="80" oninput="this.nextElementSibling.value = this.value">
-            <output style="color: #d4af37; font-weight: bold;">80</output>%
-        </div>
-        <button onclick="sendData('/save_progress')" style="background: #444; color: white;">Log Weekly Progress</button>
+<div class="container">
+    <div class="card">
+        <h2>Client Profile</h2>
+        <input type="text" id="name" placeholder="Client Name">
+        <input type="number" id="age" placeholder="Age">
+        <input type="number" id="weight" placeholder="Weight (kg)">
+        <select id="program">
+            {% for p in programs %}<option value="{{p}}">{{p}}</option>{% endfor %}
+        </select>
+        <button onclick="saveClient()">Save Profile</button>
+    </div>
+
+    <div class="card">
+        <h2>Weekly Logging</h2>
+        <label>Adherence: <span id="adh-val">80</span>%</label>
+        <input type="range" id="adherence" min="0" max="100" value="80" oninput="document.getElementById('adh-val').innerText=this.value">
+        <button onclick="saveProgress()">Log Progress</button>
+        <button onclick="loadChart()" style="background:#555; color:white;">View Progress Chart</button>
+    </div>
+
+    <div class="card" id="chart-container">
+        <canvas id="progressChart"></canvas>
     </div>
 </div>
 
 <script>
-async function sendData(endpoint) {
-    const payload = {
+let myChart;
+
+async function saveClient() {
+    const data = {
         name: document.getElementById('name').value,
         age: document.getElementById('age').value,
         weight: document.getElementById('weight').value,
-        program: document.getElementById('program').value,
-        adherence: document.getElementById('adherence').value
+        program: document.getElementById('program').value
     };
-
-    const response = await fetch(endpoint, {
+    const res = await fetch('/save_client', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify(payload)
+        body: JSON.stringify(data)
     });
+    alert("Profile Saved!");
+}
+
+async function saveProgress() {
+    const data = {
+        name: document.getElementById('name').value,
+        adherence: document.getElementById('adherence').value
+    };
+    await fetch('/save_progress', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+    });
+    alert("Progress Logged!");
+    loadChart();
+}
+
+async function loadChart() {
+    const name = document.getElementById('name').value;
+    const res = await fetch(`/get_progress/${name}`);
+    const data = await res.json();
+
+    const ctx = document.getElementById('progressChart').getContext('2d');
+    if (myChart) myChart.destroy();
     
-    const result = await response.json();
-    alert(result.message);
+    myChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: data.map(d => d.week),
+            datasets: [{
+                label: 'Adherence %',
+                data: data.map(d => d.adherence),
+                borderColor: '#d4af37',
+                backgroundColor: 'rgba(212, 175, 55, 0.2)',
+                fill: true,
+                tension: 0.3
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+    });
 }
 </script>
 </body>
