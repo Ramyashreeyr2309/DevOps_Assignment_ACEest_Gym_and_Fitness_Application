@@ -30,3 +30,16 @@ jobs:
         PYTHONPATH: ${{ github.workspace }}/app
       run: |
         pytest app/test_app.py
+
+    - name: Set up Docker Buildx
+      # This step only runs if pytest succeeds
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build Docker Image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        # Uses the Dockerfile in your root to build the 'app' directory
+        file: ./dockerfile
+        push: false # Set to true and add credentials if pushing to a registry
+        tags: aceest-fitness-app:latest
