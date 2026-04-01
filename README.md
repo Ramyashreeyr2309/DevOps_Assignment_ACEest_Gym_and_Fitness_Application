@@ -71,3 +71,5 @@ comprehensive fitness management system with historical data logging.
 APP_V3.2.1
 data-tracking tool to a secure, "premium" fitness management system. The focus shifted heavily toward Security (Authentication) and Client Deliverables (PDF Reporting).
 
+APP_V3.3.1
+Added Features and final output
