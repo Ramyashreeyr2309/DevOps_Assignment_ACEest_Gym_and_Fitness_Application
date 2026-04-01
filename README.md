@@ -67,3 +67,7 @@ Transition from a simple information-display tool to a data-driven tracking syst
 
 APP_V3.0.1
 comprehensive fitness management system with historical data logging.
+
+APP_V3.2.1
+data-tracking tool to a secure, "premium" fitness management system. The focus shifted heavily toward Security (Authentication) and Client Deliverables (PDF Reporting).
+
