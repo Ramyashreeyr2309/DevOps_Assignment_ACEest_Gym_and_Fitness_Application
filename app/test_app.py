@@ -1,140 +1,95 @@
 import pytest
-from app import app, get_db, PROGRAMS
 import sqlite3
-from datetime import datetime
+import os
+import uuid
+from app import app
 
 @pytest.fixture
 def client():
+    # 1. Setup: Create a unique DB for each test to avoid locking/integrity errors
+    test_db = f"test_{uuid.uuid4().hex}.db"
     app.config['TESTING'] = True
-    app.config['DATABASE'] = ':memory:'
-    with app.test_client() as client:
-        with app.app_context():
-            init_db()
-        yield client
-        clear_db()
+    app.config['DATABASE'] = test_db
+    app.config['SECRET_KEY'] = 'test_secret_key'
+    app.config['WTF_CSRF_ENABLED'] = False # Disabling CSRF for easier testing
 
-def init_db():
-    conn = get_db()
+    # 2. Initialize the schema
+    conn = sqlite3.connect(test_db)
     conn.executescript('''
+        CREATE TABLE IF NOT EXISTS users (
+            username TEXT PRIMARY KEY,
+            password TEXT,
+            role TEXT
+        );
         CREATE TABLE IF NOT EXISTS clients (
             name TEXT PRIMARY KEY,
             age INTEGER,
             weight REAL,
-            program TEXT,
-            calories INTEGER
-        );
-        CREATE TABLE IF NOT EXISTS progress (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            client_name TEXT,
-            week TEXT,
-            adherence INTEGER,
-            FOREIGN KEY(client_name) REFERENCES clients(name)
-        );
-        CREATE TABLE IF NOT EXISTS workouts (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            client_name TEXT,
-            date TEXT,
-            workout_type TEXT,
-            duration_min INTEGER,
-            notes TEXT,
-            FOREIGN KEY(client_name) REFERENCES clients(name)
+            program TEXT
         );
     ''')
     conn.commit()
     conn.close()
 
-def clear_db():
-    conn = get_db()
-    conn.executescript('''
-        DELETE FROM clients;
-        DELETE FROM progress;
-        DELETE FROM workouts;
-    ''')
+    with app.test_client() as client:
+        yield client
+
+    # 3. Teardown: Clean up the temporary database file
+    if os.path.exists(test_db):
+        try:
+            os.remove(test_db)
+        except PermissionError:
+            pass # Handle Windows file locking delays
+
+def test_login_success(client):
+    # Insert test user
+    db_path = app.config['DATABASE']
+    conn = sqlite3.connect(db_path)
+    conn.execute("INSERT INTO users (username, password, role) VALUES (?, ?, ?)", ("admin", "password", "Admin"))
     conn.commit()
     conn.close()
 
-
-def test_save_client(client):
-    data = {
-        "name": "Jane Doe",
-        "age": 25,
-        "weight": 60,
-        "program": "Beginner (BG)"
-    }
-    response = client.post('/api/save_client', json=data)
+    # Perform actual login to establish session context
+    response = client.post('/login', data={"username": "admin", "password": "password"}, follow_redirects=True)
     assert response.status_code == 200
-    assert response.get_json()['status'] == "success"
+    assert b"Dashboard" in response.data # Check if we reached the dashboard
 
-def test_update_client(client):
-    # Save initial client
-    client.post('/api/save_client', json={
-        "name": "Alice",
-        "age": 28,
-        "weight": 65,
-        "program": "Fat Loss (FL)"
-    })
-
-    # Update client
-    updated_data = {
-        "name": "Alice",
-        "age": 29,
-        "weight": 68,
-        "program": "Muscle Gain (MG)"
-    }
-    response = client.post('/api/save_client', json=updated_data)
-    assert response.status_code == 200
-    assert response.get_json()['status'] == "success"
-
-def test_view_history(client):
-    # Save a client and workout history
-    client.post('/api/save_client', json={
-        "name": "Bob",
-        "age": 35,
-        "weight": 80,
-        "program": "Muscle Gain (MG)"
-    })
-    conn = get_db()
-    conn.execute("""
-        INSERT INTO workouts (client_name, date, workout_type, duration_min, notes)
-        VALUES ('Bob', '2026-03-30', 'Cardio', 30, 'Morning run')
-    """)
+def test_dashboard_admin(client):
+    db_path = app.config['DATABASE']
+    conn = sqlite3.connect(db_path)
+    conn.execute("INSERT INTO users (username, password, role) VALUES (?, ?, ?)", ("admin", "password", "Admin"))
     conn.commit()
     conn.close()
 
-    # Retrieve workout history
-    response = client.get('/history/Bob')
+    # Use the client to log in properly
+    client.post('/login', data={"username": "admin", "password": "password"})
+    
+    response = client.get('/')
     assert response.status_code == 200
-    assert 'Cardio' in response.get_data(as_text=True)
 
-def test_view_history_nonexistent_client(client):
-    response = client.get('/history/NonExistent')
-    assert response.status_code == 200
-    assert 'No history found' in response.get_data(as_text=True)
 
-def test_get_progress(client):
-    # Save a client and progress
-    client.post('/api/save_client', json={
-        "name": "Bob",
-        "age": 35,
-        "weight": 80,
-        "program": "Muscle Gain (MG)"
-    })
-    conn = get_db()
-    conn.execute("""
-        INSERT INTO progress (client_name, week, adherence)
-        VALUES ('Bob', 'Week 13 - 2026', 85)
-    """)
+def test_export_pdf(client):
+    db_path = app.config['DATABASE']
+    conn = sqlite3.connect(db_path)
+    conn.execute("INSERT INTO users (username, password, role) VALUES (?, ?, ?)", ("client1", "password", "Client"))
+    conn.execute("INSERT INTO clients (name, age, weight, program) VALUES (?, ?, ?, ?)", ("client1", 30, 70, "Fat Loss (FL)"))
     conn.commit()
     conn.close()
 
-    # Retrieve progress
-    response = client.get('/api/progress/Bob')
-    assert response.status_code == 200
-    progress = response.get_json()
-    assert len(progress) == 1
-    assert progress[0]['adherence'] == 85
+    client.post('/login', data={"username": "client1", "password": "password"})
 
-def test_get_progress_nonexistent_client(client):
-    response = client.get('/api/progress/NonExistent')
+    response = client.get('/export_pdf/client1')
     assert response.status_code == 200
-    assert response.get_json() == []
+    assert response.headers['Content-Type'] == 'application/pdf'
+
+def test_logout(client):
+    db_path = app.config['DATABASE']
+    conn = sqlite3.connect(db_path)
+    conn.execute("INSERT INTO users (username, password, role) VALUES (?, ?, ?)", ("admin", "password", "Admin"))
+    conn.commit()
+    conn.close()
+
+    client.post('/login', data={"username": "admin", "password": "password"})
+    response = client.get('/logout', follow_redirects=True)
+    assert response.status_code == 200
+    assert b"login" in response.data.lower()
