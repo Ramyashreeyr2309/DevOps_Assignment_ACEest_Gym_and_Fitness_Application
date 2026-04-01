@@ -1,125 +1,89 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>ACEest Fitness & Performance v2</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <title>ACEest Fitness v2.0.1</title>
     <style>
-        body { background-color: #1a1a1a; color: white; font-family: Arial; margin: 0; }
-        .header { background: #d4af37; color: black; text-align: center; padding: 15px; font-size: 22px; font-weight: bold; }
-        .main { display: flex; padding: 20px; gap: 20px; }
-        .left-panel { flex: 1; border: 2px solid #d4af37; padding: 20px; border-radius: 8px; height: fit-content; }
-        .right-panel { flex: 2; display: flex; flex-direction: column; gap: 15px; }
-        .card { background: #111; border: 1px solid #d4af37; padding: 15px; border-radius: 5px; }
-        input, select { width: 90%; padding: 8px; margin: 5px 0; background: #333; color: white; border: 1px solid #555; }
-        button { width: 100%; padding: 10px; background: #d4af37; border: none; font-weight: bold; cursor: pointer; margin-top: 10px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; background: #222; }
-        th, td { border: 1px solid #444; padding: 8px; text-align: left; font-size: 13px; }
-        th { background-color: #d4af37; color: black; }
-        .chart-container { height: 250px; width: 100%; }
+        body { background: #1a1a1a; color: white; font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; align-items: center; }
+        .container { width: 800px; border: 2px solid #d4af37; padding: 20px; margin-top: 50px; border-radius: 10px; background: #262626; }
+        h1 { color: #d4af37; text-align: center; border-bottom: 1px solid #d4af37; padding-bottom: 10px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; color: #d4af37; }
+        input, select { width: 100%; padding: 8px; background: #333; border: 1px solid #444; color: white; }
+        button { background: #d4af37; color: black; border: none; padding: 10px 20px; font-weight: bold; cursor: pointer; margin-right: 10px; }
+        #summary { background: #000; color: #0f0; font-family: monospace; padding: 15px; border: 1px solid #d4af37; margin-top: 20px; white-space: pre; }
     </style>
 </head>
 <body>
 
-<div class="header">ACEest FUNCTIONAL FITNESS SYSTEM v2</div>
-
-<div class="main">
-    <div class="left-panel">
-        <h3>Client Profile</h3>
-        <input type="text" id="name" placeholder="Name">
-        <input type="number" id="age" placeholder="Age">
-        <input type="number" id="weight" placeholder="Weight (kg)" oninput="updateUI()">
-        <select id="program" onchange="updateUI()">
-            <option value="" disabled selected>Select Program</option>
-            {% for name in programs %}
-            <option value="{{ name }}">{{ name }}</option>
+<div class="container">
+    <h1>ACEest PERFORMANCE v2.0.1</h1>
+    
+    <div class="form-group">
+        <label>Client Name</label>
+        <input type="text" id="name">
+    </div>
+    <div class="form-group">
+        <label>Age</label>
+        <input type="number" id="age">
+    </div>
+    <div class="form-group">
+        <label>Weight (kg)</label>
+        <input type="number" id="weight">
+    </div>
+    <div class="form-group">
+        <label>Program</label>
+        <select id="program">
+            {% for p in programs %}
+            <option value="{{ p }}">{{ p }}</option>
             {% endfor %}
         </select>
-        <label>Weekly Adherence: <span id="adh-val">0</span>%</label>
-        <input type="range" id="adherence" min="0" max="100" value="0" oninput="document.getElementById('adh-val').innerText=this.value">
-        
-        <button onclick="saveClient()">Save Client</button>
-        <button onclick="window.location.href='/export_csv'" style="background:#444; color:white;">Export CSV</button>
     </div>
 
-    <div class="right-panel">
-        <div class="card">
-            <h4 style="color:#d4af37; margin:0;">Weekly Training & Diet</h4>
-            <div id="plan-display" style="white-space: pre-line; margin-top:10px;">Select a program to see details...</div>
-            <div id="calorie-display" style="margin-top:10px; color:#d4af37; font-weight:bold;">Estimated Calories: --</div>
-        </div>
+    <button onclick="saveData()">Save Client</button>
+    <button onclick="loadData()" style="background: #555; color: white;">Load Client</button>
 
-        <div class="card">
-            <h4 style="color:#d4af37; margin:0;">Client List</h4>
-            <table>
-                <thead><tr><th>Name</th><th>Program</th><th>Adherence</th></tr></thead>
-                <tbody>
-                    {% for client in clients %}
-                    <tr><td>{{ client.name }}</td><td>{{ client.program }}</td><td>{{ client.target_adherence }}%</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-
-        <div class="card">
-            <h4 style="color:#d4af37; margin:0;">Progress Chart</h4>
-            <div class="chart-container"><canvas id="progressChart"></canvas></div>
-        </div>
-    </div>
+    <div id="summary">CLIENT PROFILE SUMMARY WILL APPEAR HERE</div>
 </div>
 
 <script>
-    const programs = {};
-
-    const clientData = [];
-
-    function updateUI() {
-        const progName = document.getElementById('program').value;
-        const weight = parseFloat(document.getElementById('weight').value) || 0;
-        
-        if (progName && programs[progName]) {
-            const data = programs[progName];
-            document.getElementById('plan-display').innerHTML = `<span style="color:${data.color}"><strong>Workout:</strong> ${data.workout}</span><br><strong>Diet:</strong> ${data.diet}`;
-            if (weight > 0) {
-                document.getElementById('calorie-display').innerText = `Estimated Calories: ${Math.round(weight * data.calorie_factor)} kcal`;
-            }
-        }
-    }
-
-    async function saveClient() {
-        const payload = {
-            name: document.getElementById('name').value,
-            age: document.getElementById('age').value,
-            weight: document.getElementById('weight').value,
-            program: document.getElementById('program').value,
-            adherence: document.getElementById('adherence').value
-        };
-        const resp = await fetch('/save_client', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(payload)
-        });
-        const result = await resp.json();
-        alert(result.message);
-        location.reload();
-    }
-
-    // Chart.js implementation for the Progress Chart 
-    const ctx = document.getElementById('progressChart').getContext('2d');
-    new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: clientData.map(c => c.name),
-            datasets: [{
-                label: 'Adherence %',
-                data: clientData.map(c => c.adherence),
-                backgroundColor: '#d4af37'
-            }]
-        },
-        options: {
-            maintainAspectRatio: false,
-            scales: { y: { beginAtZero: true, max: 100 } }
-        }
+async function saveData() {
+    const data = {
+        name: document.getElementById('name').value,
+        age: document.getElementById('age').value,
+        weight: document.getElementById('weight').value,
+        program: document.getElementById('program').value
+    };
+    const response = await fetch('/save_client', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
     });
+    const result = await response.json();
+    alert(result.message);
+    if(result.status === 'success') loadData();
+}
+
+async function loadData() {
+    const name = document.getElementById('name').value;
+    const response = await fetch(`/load_client/${name}`);
+    const data = await response.json();
+    
+    if(data.error) {
+        alert(data.error);
+    } else {
+        document.getElementById('age').value = data.age;
+        document.getElementById('weight').value = data.weight;
+        document.getElementById('program').value = data.program;
+        
+        document.getElementById('summary').innerText = 
+            `CLIENT PROFILE\n--------------\n` +
+            `Name     : ${data.name}\n` +
+            `Age      : ${data.age}\n` +
+            `Weight   : ${data.weight} kg\n` +
+            `Program  : ${data.program}\n` +
+            `Calories : ${data.calories} kcal/day`;
+    }
+}
 </script>
 </body>
 </html>
