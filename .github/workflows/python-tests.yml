@@ -29,4 +29,4 @@ jobs:
       env:
         PYTHONPATH: ${{ github.workspace }}/app
       run: |
-        pytest test_app.py
+        pytest app/test_app.py
