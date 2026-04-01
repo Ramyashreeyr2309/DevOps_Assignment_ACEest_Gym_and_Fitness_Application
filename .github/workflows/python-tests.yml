@@ -29,6 +29,7 @@ jobs:
       env:
         PYTHONPATH: ${{ github.workspace }}/app
       run: |
+        cp aceest_fitness.db app/aceest_fitness.db
         pytest app/test_app.py
 
     - name: Set up Docker Buildx
