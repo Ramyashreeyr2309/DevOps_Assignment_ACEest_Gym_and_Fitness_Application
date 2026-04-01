@@ -42,4 +42,5 @@ def get_program(program):
     return jsonify({"error": "Program not found"}), 404
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    # host='0.0.0.0' is required for Docker connectivity
+    app.run(debug=True, host='0.0.0.0', port=5000)
