@@ -57,4 +57,4 @@ APP_V_2_0_1
 Introduces automatic calorie calculation logic
 
 APP_V_2_1_2
-Added new featues
+Added new featues to code
