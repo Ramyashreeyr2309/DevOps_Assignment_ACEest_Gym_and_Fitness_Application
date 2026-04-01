@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Workout History</title>
+</head>
+<body>
+    <h1>Workout History for {{ client }}</h1>
+
+    {% if history %}
+        <ul>
+            {% for workout in history %}
+                <li>
+                    <strong>Date:</strong> {{ workout.date }}<br>
+                    <strong>Type:</strong> {{ workout.workout_type }}<br>
+                    <strong>Duration:</strong> {{ workout.duration_min }} minutes<br>
+                    <strong>Notes:</strong> {{ workout.notes }}
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>No history found for this client.</p>
+    {% endif %}
+</body>
+</html>

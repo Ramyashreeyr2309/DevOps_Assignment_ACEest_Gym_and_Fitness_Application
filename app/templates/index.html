@@ -1,87 +1,59 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>ACEest Performance Web</title>
+    <title>ACEest Performance v3.0.1</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { background: #1a1a1a; color: white; font-family: 'Segoe UI', sans-serif; padding: 20px; }
-        .grid { display: grid; grid-template-columns: 350px 1fr; gap: 20px; }
-        .card { background: #262626; border: 1px solid #d4af37; padding: 20px; border-radius: 8px; }
-        h2 { color: #d4af37; margin-top: 0; border-bottom: 1px solid #444; padding-bottom: 10px; }
-        input, select { width: 100%; padding: 10px; margin: 10px 0; background: #333; border: 1px solid #555; color: white; box-sizing: border-box; }
-        button { width: 100%; padding: 12px; background: #d4af37; color: black; border: none; font-weight: bold; cursor: pointer; margin-top: 10px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        th, td { border: 1px solid #444; padding: 10px; text-align: left; }
-        th { background: #d4af37; color: black; }
+        body { background: #1a1a1a; color: white; font-family: sans-serif; padding: 20px; }
+        .card { background: #262626; border: 1px solid #d4af37; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        h2 { color: #d4af37; border-bottom: 1px solid #444; padding-bottom: 10px; }
+        .grid { display: grid; grid-template-columns: 1fr 2fr; gap: 20px; }
+        input, select { width: 100%; padding: 10px; margin: 10px 0; background: #333; color: white; border: 1px solid #555; }
+        button { background: #d4af37; color: black; border: none; padding: 12px; width: 100%; font-weight: bold; cursor: pointer; }
+        .client-item { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #333; }
     </style>
 </head>
 <body>
 
-<h1 style="text-align:center; color:#d4af37;">ACEest PERFORMANCE v2.2.4 (Web)</h1>
+<h1 style="text-align:center; color:#d4af37;">ACEest PERFORMANCE v3.0.1 (Web)</h1>
 
 <div class="grid">
     <div class="card">
-        <h2>Client Management</h2>
+        <h2>Client Profile</h2>
         <input type="text" id="name" placeholder="Name">
         <input type="number" id="age" placeholder="Age">
         <input type="number" id="weight" placeholder="Weight (kg)">
         <select id="program">
             {% for p in programs %}<option value="{{p}}">{{p}}</option>{% endfor %}
         </select>
-        <label>Target Adherence: <span id="adh_val">80</span>%</label>
-        <input type="range" id="adherence" min="0" max="100" value="80" oninput="document.getElementById('adh_val').innerText=this.value">
-        <button onclick="saveClient()">Save / Update Client</button>
+        <button onclick="saveClient()">Save Profile</button>
         
-        <div style="margin-top:20px;">
-            <h3>Active Clients</h3>
-            <div id="client-list"></div>
+        <h3 style="margin-top:25px;">Registered Clients</h3>
+        <div id="client-list">
+            {% for client in clients %}
+            <div class="client-item">
+                <span>{{ client.name }}</span>
+                <button onclick="loadChart('{{ client.name }}')" style="width:auto; padding:5px;">View</button>
+                <a href="/history/{{ client.name }}" style="color:#d4af37; font-size:12px;">History</a>
+            </div>
+            {% endfor %}
         </div>
     </div>
 
     <div class="card">
-        <h2>Progress Visualization</h2>
+        <h2>Adherence Progress</h2>
         <canvas id="progressChart" style="max-height: 400px;"></canvas>
     </div>
 </div>
 
 <script>
-let myChart;
-
-async function saveClient() {
-    const data = {
-        name: document.getElementById('name').value,
-        age: document.getElementById('age').value,
-        weight: document.getElementById('weight').value,
-        program: document.getElementById('program').value,
-        adherence: document.getElementById('adherence').value
-    };
-    await fetch('/api/save_client', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify(data)
-    });
-    alert("Client Saved!");
-    loadClientList();
-}
-
-async function loadClientList() {
-    const res = await fetch('/api/clients');
-    const clients = await res.json();
-    let html = '<table><tr><th>Name</th><th>Prog</th><th>Action</th></tr>';
-    clients.forEach(c => {
-        html += `<tr><td>${c.name}</td><td>${c.program}</td>
-                 <td><button onclick="viewProgress('${c.name}')" style="padding:2px; font-size:10px;">View</button></td></tr>`;
-    });
-    document.getElementById('client-list').innerHTML = html + '</table>';
-}
-
-async function viewProgress(name) {
+let chart;
+async function loadChart(name) {
     const res = await fetch(`/api/progress/${name}`);
     const data = await res.json();
-    
     const ctx = document.getElementById('progressChart').getContext('2d');
-    if (myChart) myChart.destroy();
-    myChart = new Chart(ctx, {
+    if (chart) chart.destroy();
+    chart = new Chart(ctx, {
         type: 'line',
         data: {
             labels: data.map(d => d.week),
@@ -95,8 +67,20 @@ async function viewProgress(name) {
         }
     });
 }
-
-loadClientList();
+async function saveClient() {
+    const payload = {
+        name: document.getElementById('name').value,
+        age: document.getElementById('age').value,
+        weight: document.getElementById('weight').value,
+        program: document.getElementById('program').value
+    };
+    await fetch('/api/save_client', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(payload)
+    });
+    location.reload();
+}
 </script>
 </body>
 </html>
