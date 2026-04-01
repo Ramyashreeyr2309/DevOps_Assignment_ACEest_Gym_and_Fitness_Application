@@ -1,70 +1,59 @@
 import sqlite3
-import csv
-import io
-from flask import Flask, render_template, jsonify, request, Response
+from flask import Flask, render_template, request, jsonify
 
 app = Flask(__name__)
-DB_PATH = 'aceest_fitness.db'
+DB_NAME = "aceest_fitness.db"
 
-# Data Store from Aceestver1.1.2.py 
+# Program data from Aceestver2.0.1.py
 PROGRAMS = {
-    "Fat Loss (FL)": {"workout": "Back Squat, Cardio, Bench, Deadlift, Recovery",
-                      "diet": "Egg Whites, Chicken, Fish Curry",
-                      "color": "#e74c3c", "calorie_factor": 22},
-    "Muscle Gain (MG)": {"workout": "Squat, Bench, Deadlift, Press, Rows",
-                         "diet": "Eggs, Biryani, Mutton Curry",
-                         "color": "#2ecc71", "calorie_factor": 35},
-    "Beginner (BG)": {"workout": "Air Squats, Ring Rows, Push-ups",
-                      "diet": "Balanced Tamil Meals",
-                      "color": "#3498db", "calorie_factor": 26}
+    "Fat Loss (FL)": {"factor": 22},
+    "Muscle Gain (MG)": {"factor": 35},
+    "Beginner (BG)": {"factor": 26}
 }
 
-def get_db_connection():
-    conn = sqlite3.connect(DB_PATH)
+def get_db():
+    conn = sqlite3.connect(DB_NAME)
     conn.row_factory = sqlite3.Row
     return conn
 
 @app.route('/')
 def index():
-    conn = get_db_connection()
-    clients = conn.execute('SELECT * FROM clients').fetchall()
-    conn.close()
-    return render_template('index.html', programs=PROGRAMS, clients=clients)
+    return render_template('index.html', programs=PROGRAMS.keys())
 
 @app.route('/save_client', methods=['POST'])
 def save_client():
     data = request.json
+    name = data.get('name')
+    age = int(data.get('age', 0))
+    weight = float(data.get('weight', 0))
+    program = data.get('program')
+    
+    # Calculate calories using the factor from your logic
+    factor = PROGRAMS.get(program, {}).get('factor', 25)
+    calories = int(weight * factor)
+
     try:
-        conn = get_db_connection()
-        conn.execute('''
-            INSERT INTO clients (name, age, weight, program, target_adherence)
+        conn = get_db()
+        conn.execute("""
+            INSERT INTO clients (name, age, weight, program, calories)
             VALUES (?, ?, ?, ?, ?)
             ON CONFLICT(name) DO UPDATE SET
-            age=excluded.age, weight=excluded.weight, program=excluded.program, target_adherence=excluded.target_adherence
-        ''', (data['name'], data['age'], data['weight'], data['program'], data['adherence']))
+            age=excluded.age, weight=excluded.weight, program=excluded.program, calories=excluded.calories
+        """, (name, age, weight, program, calories))
         conn.commit()
         conn.close()
-        return jsonify({"status": "success", "message": f"Client {data['name']} saved!"})
+        return jsonify({"status": "success", "message": f"Saved {name} with {calories} kcal/day"})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
-@app.route('/export_csv')
-def export_csv():
-    conn = get_db_connection()
-    clients = conn.execute('SELECT name, age, weight, program, target_adherence FROM clients').fetchall()
+@app.route('/load_client/<name>')
+def load_client(name):
+    conn = get_db()
+    row = conn.execute("SELECT * FROM clients WHERE name=?", (name,)).fetchone()
     conn.close()
-
-    output = io.StringIO()
-    writer = csv.writer(output)
-    writer.writerow(["Name", "Age", "Weight", "Program", "Adherence"])
-    for row in clients:
-        writer.writerow(list(row))
-    
-    return Response(
-        output.getvalue(),
-        mimetype="text/csv",
-        headers={"Content-disposition": "attachment; filename=clients_export.csv"}
-    )
+    if row:
+        return jsonify(dict(row))
+    return jsonify({"error": "Client not found"}), 404
 
 if __name__ == '__main__':
     # host='0.0.0.0' is required for Docker connectivity
