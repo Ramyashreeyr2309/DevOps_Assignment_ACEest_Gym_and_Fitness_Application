@@ -5,7 +5,7 @@ from datetime import datetime
 app = Flask(__name__)
 DB_NAME = "aceest_fitness.db"
 
-# Data logic from Aceestver-2.2.1.py
+# Logic constants from Aceestver-2.2.4.py
 PROGRAMS = {
     "Fat Loss (FL)": {"factor": 22},
     "Muscle Gain (MG)": {"factor": 35},
@@ -21,42 +21,38 @@ def get_db():
 def index():
     return render_template('index.html', programs=PROGRAMS.keys())
 
-@app.route('/save_client', methods=['POST'])
+@app.route('/api/clients', methods=['GET'])
+def get_clients():
+    db = get_db()
+    clients = db.execute("SELECT name, program, target_adherence FROM clients").fetchall()
+    return jsonify([dict(row) for row in clients])
+
+@app.route('/api/save_client', methods=['POST'])
 def save_client():
     data = request.json
-    weight = float(data.get('weight', 0))
-    program = data.get('program')
-    calories = int(weight * PROGRAMS.get(program, {"factor": 25})['factor'])
+    name = data['name']
+    weight = float(data['weight'])
+    program = data['program']
+    
+    # Calculate calories based on your version 2.2.4 logic
+    factor = PROGRAMS.get(program, {"factor": 25})['factor']
+    calories = int(weight * factor)
 
-    conn = get_db()
-    conn.execute("""
-        INSERT INTO clients (name, age, weight, program, calories)
-        VALUES (?, ?, ?, ?, ?)
+    db = get_db()
+    db.execute("""
+        INSERT INTO clients (name, age, weight, program, calories, target_adherence)
+        VALUES (?, ?, ?, ?, ?, ?)
         ON CONFLICT(name) DO UPDATE SET
-        age=excluded.age, weight=excluded.weight, program=excluded.program, calories=excluded.calories
-    """, (data['name'], data['age'], weight, program, calories))
-    conn.commit()
-    conn.close()
-    return jsonify({"status": "success", "calories": calories})
+        weight=excluded.weight, program=excluded.program, calories=excluded.calories
+    """, (name, data['age'], weight, program, calories, data['adherence']))
+    db.commit()
+    return jsonify({"status": "success", "message": f"Saved {name}!"})
 
-@app.route('/get_progress/<name>')
+@app.route('/api/progress/<name>')
 def get_progress(name):
-    conn = get_db()
-    cursor = conn.execute("SELECT week, adherence FROM progress WHERE client_name=? ORDER BY id", (name,))
-    data = cursor.fetchall()
-    conn.close()
-    return jsonify([{"week": row["week"], "adherence": row["adherence"]} for row in data])
-
-@app.route('/save_progress', methods=['POST'])
-def save_progress():
-    data = request.json
-    week = datetime.now().strftime("Week %U - %Y")
-    conn = get_db()
-    conn.execute("INSERT INTO progress (client_name, week, adherence) VALUES (?, ?, ?)",
-                 (data['name'], week, data['adherence']))
-    conn.commit()
-    conn.close()
-    return jsonify({"status": "success"})
+    db = get_db()
+    rows = db.execute("SELECT week, adherence FROM progress WHERE client_name=? ORDER BY id", (name,)).fetchall()
+    return jsonify([dict(row) for row in rows])
 
 if __name__ == '__main__':
     # host='0.0.0.0' is required for Docker connectivity

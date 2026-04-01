@@ -1,44 +1,46 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>ACEest Fitness v2.2.1</title>
+    <title>ACEest Performance Web</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { background: #1a1a1a; color: white; font-family: sans-serif; padding: 20px; }
-        .container { max-width: 900px; margin: auto; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        .card { background: #262626; border: 1px solid #d4af37; padding: 20px; border-radius: 10px; }
-        h2 { color: #d4af37; border-bottom: 1px solid #d4af37; padding-bottom: 10px; }
-        input, select { width: 100%; padding: 8px; margin: 10px 0; background: #333; color: white; border: 1px solid #444; }
-        button { background: #d4af37; color: black; border: none; padding: 10px; width: 100%; font-weight: bold; cursor: pointer; margin-top: 10px; }
-        #chart-container { grid-column: span 2; height: 300px; }
+        body { background: #1a1a1a; color: white; font-family: 'Segoe UI', sans-serif; padding: 20px; }
+        .grid { display: grid; grid-template-columns: 350px 1fr; gap: 20px; }
+        .card { background: #262626; border: 1px solid #d4af37; padding: 20px; border-radius: 8px; }
+        h2 { color: #d4af37; margin-top: 0; border-bottom: 1px solid #444; padding-bottom: 10px; }
+        input, select { width: 100%; padding: 10px; margin: 10px 0; background: #333; border: 1px solid #555; color: white; box-sizing: border-box; }
+        button { width: 100%; padding: 12px; background: #d4af37; color: black; border: none; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { border: 1px solid #444; padding: 10px; text-align: left; }
+        th { background: #d4af37; color: black; }
     </style>
 </head>
 <body>
 
-<h1 style="text-align:center; color:#d4af37;">ACEest PERFORMANCE v2.2.1</h1>
+<h1 style="text-align:center; color:#d4af37;">ACEest PERFORMANCE v2.2.4 (Web)</h1>
 
-<div class="container">
+<div class="grid">
     <div class="card">
-        <h2>Client Profile</h2>
-        <input type="text" id="name" placeholder="Client Name">
+        <h2>Client Management</h2>
+        <input type="text" id="name" placeholder="Name">
         <input type="number" id="age" placeholder="Age">
         <input type="number" id="weight" placeholder="Weight (kg)">
         <select id="program">
             {% for p in programs %}<option value="{{p}}">{{p}}</option>{% endfor %}
         </select>
-        <button onclick="saveClient()">Save Profile</button>
+        <label>Target Adherence: <span id="adh_val">80</span>%</label>
+        <input type="range" id="adherence" min="0" max="100" value="80" oninput="document.getElementById('adh_val').innerText=this.value">
+        <button onclick="saveClient()">Save / Update Client</button>
+        
+        <div style="margin-top:20px;">
+            <h3>Active Clients</h3>
+            <div id="client-list"></div>
+        </div>
     </div>
 
     <div class="card">
-        <h2>Weekly Logging</h2>
-        <label>Adherence: <span id="adh-val">80</span>%</label>
-        <input type="range" id="adherence" min="0" max="100" value="80" oninput="document.getElementById('adh-val').innerText=this.value">
-        <button onclick="saveProgress()">Log Progress</button>
-        <button onclick="loadChart()" style="background:#555; color:white;">View Progress Chart</button>
-    </div>
-
-    <div class="card" id="chart-container">
-        <canvas id="progressChart"></canvas>
+        <h2>Progress Visualization</h2>
+        <canvas id="progressChart" style="max-height: 400px;"></canvas>
     </div>
 </div>
 
@@ -50,54 +52,51 @@ async function saveClient() {
         name: document.getElementById('name').value,
         age: document.getElementById('age').value,
         weight: document.getElementById('weight').value,
-        program: document.getElementById('program').value
-    };
-    const res = await fetch('/save_client', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify(data)
-    });
-    alert("Profile Saved!");
-}
-
-async function saveProgress() {
-    const data = {
-        name: document.getElementById('name').value,
+        program: document.getElementById('program').value,
         adherence: document.getElementById('adherence').value
     };
-    await fetch('/save_progress', {
+    await fetch('/api/save_client', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify(data)
     });
-    alert("Progress Logged!");
-    loadChart();
+    alert("Client Saved!");
+    loadClientList();
 }
 
-async function loadChart() {
-    const name = document.getElementById('name').value;
-    const res = await fetch(`/get_progress/${name}`);
-    const data = await res.json();
+async function loadClientList() {
+    const res = await fetch('/api/clients');
+    const clients = await res.json();
+    let html = '<table><tr><th>Name</th><th>Prog</th><th>Action</th></tr>';
+    clients.forEach(c => {
+        html += `<tr><td>${c.name}</td><td>${c.program}</td>
+                 <td><button onclick="viewProgress('${c.name}')" style="padding:2px; font-size:10px;">View</button></td></tr>`;
+    });
+    document.getElementById('client-list').innerHTML = html + '</table>';
+}
 
+async function viewProgress(name) {
+    const res = await fetch(`/api/progress/${name}`);
+    const data = await res.json();
+    
     const ctx = document.getElementById('progressChart').getContext('2d');
     if (myChart) myChart.destroy();
-    
     myChart = new Chart(ctx, {
         type: 'line',
         data: {
             labels: data.map(d => d.week),
             datasets: [{
-                label: 'Adherence %',
+                label: name + ' Adherence %',
                 data: data.map(d => d.adherence),
                 borderColor: '#d4af37',
-                backgroundColor: 'rgba(212, 175, 55, 0.2)',
-                fill: true,
-                tension: 0.3
+                backgroundColor: 'rgba(212, 175, 55, 0.1)',
+                fill: true
             }]
-        },
-        options: { responsive: true, maintainAspectRatio: false }
+        }
     });
 }
+
+loadClientList();
 </script>
 </body>
 </html>
