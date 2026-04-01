@@ -58,3 +58,6 @@ Introduces automatic calorie calculation logic
 
 APP_V_2_1_2
 Added new featues to code
+
+APP_V2.2.1
+Added a new GET route, /get_progress, allowing the frontend to fetch and display the history of a client's weekly adherence logs.
