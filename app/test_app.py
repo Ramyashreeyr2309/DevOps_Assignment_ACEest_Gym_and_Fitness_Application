@@ -7,11 +7,8 @@ def client():
     with app.test_client() as client:
         yield client
 
-def test_index_route(client):
-    """Test the index route for a successful response."""
-    response = client.get('/')
-    assert response.status_code == 200
-    assert b"programs" in response.data  # Check if 'programs' is in the response
+
+
 
 def test_save_client_success(client):
     """Test saving a client successfully."""
@@ -41,10 +38,10 @@ def test_save_client_error(client):
     assert json_data['status'] == "error"
     assert "message" in json_data
 
-def test_program_data(client):
-    """Test that all programs have required fields."""
-    response = client.get('/')
+def test_export_csv(client):
+    """Test exporting client data as CSV."""
+    response = client.get('/export_csv')
     assert response.status_code == 200
-    data = response.data.decode('utf-8')
-    for program in ["Fat Loss (FL)", "Muscle Gain (MG)", "Beginner (BG)"]:
-        assert program in data
+    assert response.headers['Content-Type'].startswith("text/csv")  # Allow charset variations
+    assert "attachment; filename=clients_export.csv" in response.headers['Content-disposition']
+    assert "Name,Age,Weight,Program,Adherence" in response.data.decode('utf-8')

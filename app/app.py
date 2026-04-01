@@ -1,29 +1,22 @@
 import sqlite3
-from flask import Flask, render_template, jsonify, request
+import csv
+import io
+from flask import Flask, render_template, jsonify, request, Response
 
 app = Flask(__name__)
 DB_PATH = 'aceest_fitness.db'
 
-# Program data migrated from Aceestver-1.1.py
+# Data Store from Aceestver1.1.2.py 
 PROGRAMS = {
-    "Fat Loss (FL)": {
-        "workout": "Mon: Back Squat 5x5 + Core\nTue: EMOM 20min Assault Bike\nWed: Bench Press + 21-15-9\nThu: Deadlift + Box Jumps\nFri: Zone 2 Cardio 30min",
-        "diet": "Breakfast: Egg Whites + Oats\nLunch: Grilled Chicken + Brown Rice\nDinner: Fish Curry + Millet Roti\nTarget: ~2000 kcal",
-        "color": "#e74c3c",
-        "calorie_factor": 22
-    },
-    "Muscle Gain (MG)": {
-        "workout": "Mon: Squat 5x5\nTue: Bench 5x5\nWed: Deadlift 4x6\nThu: Front Squat 4x8\nFri: Incline Press 4x10\nSat: Barbell Rows 4x10",
-        "diet": "Breakfast: Eggs + Peanut Butter Oats\nLunch: Chicken Biryani\nDinner: Mutton Curry + Rice\nTarget: ~3200 kcal",
-        "color": "#2ecc71",
-        "calorie_factor": 35
-    },
-    "Beginner (BG)": {
-        "workout": "Full Body Circuit:\n- Air Squats\n- Ring Rows\n- Push-ups\nFocus: Technique & Consistency",
-        "diet": "Balanced Tamil Meals\nIdli / Dosa / Rice + Dal\nProtein Target: 120g/day",
-        "color": "#3498db",
-        "calorie_factor": 26
-    }
+    "Fat Loss (FL)": {"workout": "Back Squat, Cardio, Bench, Deadlift, Recovery",
+                      "diet": "Egg Whites, Chicken, Fish Curry",
+                      "color": "#e74c3c", "calorie_factor": 22},
+    "Muscle Gain (MG)": {"workout": "Squat, Bench, Deadlift, Press, Rows",
+                         "diet": "Eggs, Biryani, Mutton Curry",
+                         "color": "#2ecc71", "calorie_factor": 35},
+    "Beginner (BG)": {"workout": "Air Squats, Ring Rows, Push-ups",
+                      "diet": "Balanced Tamil Meals",
+                      "color": "#3498db", "calorie_factor": 26}
 }
 
 def get_db_connection():
@@ -33,14 +26,16 @@ def get_db_connection():
 
 @app.route('/')
 def index():
-    return render_template('index.html', programs=PROGRAMS)
+    conn = get_db_connection()
+    clients = conn.execute('SELECT * FROM clients').fetchall()
+    conn.close()
+    return render_template('index.html', programs=PROGRAMS, clients=clients)
 
 @app.route('/save_client', methods=['POST'])
 def save_client():
     data = request.json
     try:
         conn = get_db_connection()
-        # Inserting into the 'clients' table based on your DB schema 
         conn.execute('''
             INSERT INTO clients (name, age, weight, program, target_adherence)
             VALUES (?, ?, ?, ?, ?)
@@ -52,6 +47,24 @@ def save_client():
         return jsonify({"status": "success", "message": f"Client {data['name']} saved!"})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/export_csv')
+def export_csv():
+    conn = get_db_connection()
+    clients = conn.execute('SELECT name, age, weight, program, target_adherence FROM clients').fetchall()
+    conn.close()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["Name", "Age", "Weight", "Program", "Adherence"])
+    for row in clients:
+        writer.writerow(list(row))
+    
+    return Response(
+        output.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-disposition": "attachment; filename=clients_export.csv"}
+    )
 
 if __name__ == '__main__':
     # host='0.0.0.0' is required for Docker connectivity
