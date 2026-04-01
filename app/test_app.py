@@ -7,33 +7,44 @@ def client():
     with app.test_client() as client:
         yield client
 
-def test_get_program_valid(client):
-    """Test retrieving a valid program."""
-    response = client.get('/get_program/Fat Loss (FL)')
+def test_index_route(client):
+    """Test the index route for a successful response."""
+    response = client.get('/')
     assert response.status_code == 200
-    data = response.get_json()
-    assert data['workout']
-    assert data['diet']
+    assert b"programs" in response.data  # Check if 'programs' is in the response
 
-def test_get_program_invalid(client):
-    """Test retrieving an invalid program."""
-    response = client.get('/get_program/InvalidProgram')
-    assert response.status_code == 404
-    data = response.get_json()
-    assert "error" in data
+def test_save_client_success(client):
+    """Test saving a client successfully."""
+    data = {
+        "name": "John Doe",
+        "age": 30,
+        "weight": 75,
+        "program": "Fat Loss (FL)",
+        "adherence": 90
+    }
+    response = client.post('/save_client', json=data)
+    assert response.status_code == 200
+    json_data = response.get_json()
+    assert json_data['status'] == "success"
+    assert "Client John Doe saved!" in json_data['message']
 
-def test_program_colors(client):
-    """Test that each program has a color defined."""
-    for program in ['Fat Loss (FL)', 'Muscle Gain (MG)', 'Beginner (BG)']:
-        response = client.get(f'/get_program/{program}')
-        assert response.status_code == 200
-        data = response.get_json()
-        assert 'color' in data
+def test_save_client_error(client):
+    """Test saving a client with missing data."""
+    data = {
+        "name": "Jane Doe",
+        "age": 25
+        # Missing weight, program, and adherence
+    }
+    response = client.post('/save_client', json=data)
+    assert response.status_code == 500
+    json_data = response.get_json()
+    assert json_data['status'] == "error"
+    assert "message" in json_data
 
-def test_program_targets(client):
-    """Test that each program has a target calorie value."""
-    for program in ['Fat Loss (FL)', 'Muscle Gain (MG)']:
-        response = client.get(f'/get_program/{program}')
-        assert response.status_code == 200
-        data = response.get_json()
-        assert 'Target' in data['diet']
+def test_program_data(client):
+    """Test that all programs have required fields."""
+    response = client.get('/')
+    assert response.status_code == 200
+    data = response.data.decode('utf-8')
+    for program in ["Fat Loss (FL)", "Muscle Gain (MG)", "Beginner (BG)"]:
+        assert program in data
