@@ -147,3 +147,5 @@ def test_logout(client):
     client.post('/login', data={'username': 'admin', 'password': 'password'})
     response = client.get('/logout', follow_redirects=True)
     assert b"login" in response.data or response.status_code == 200
+
+    #tested completely

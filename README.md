@@ -73,3 +73,78 @@ data-tracking tool to a secure, "premium" fitness management system. The focus s
 
 APP_V3.3.1
 Added Features and final output
+
+
+Running Pytest manually
+
+To execute pytest manually for your Aceest Gym and Fitness Application, you need to ensure your environment is set up correctly so that the test script can find your application code.
+
+Follow these steps in your terminal (Command Prompt or PowerShell):
+
+1. Activate your Virtual Environment
+Before running any commands, you must be inside the virtual environment where your dependencies (Flask, FPDF, pytest, etc.) are installed.
+
+PowerShell
+# Navigate to your project root first
+cd C:\Users\Ramya_Shashank\DevOps_Assignment_ACEest_Gym_and_Fitness_Application
+
+# Activate the venv
+.\venv\Scripts\activate
+2. Set the Python Path
+Since your project structure puts the code inside an app folder, pytest needs to know where to look for app.py when it sees from app import... in your test file.
+
+PowerShell
+# Windows (cmd)
+set PYTHONPATH=%CD%\app
+
+# Windows (PowerShell)
+$env:PYTHONPATH = "$pwd\app"
+3. Run the Tests
+You can run all tests, a specific file, or even a specific test case.
+
+Run everything:
+
+PowerShell
+python -m pytest
+Run just the specific test file:
+
+PowerShell
+python -m pytest app/test_app.py
+Run and see the output of print statements (Verbose mode):
+
+PowerShell
+python -m pytest -v -s app/test_app.py
+
+
+Jenkins and Github Actions Overview
+For a high-level overview, both Jenkins and GitHub Actions serve the same goal: Automating the lifecycle of your ACEest Fitness App. However, they differ in where they run and how they are configured.
+
+1. GitHub Actions (The "Cloud-Native" Workflow)
+GitHub Actions is integrated directly into your repository. It uses Event-Triggers (like a git push) to start a job on GitHub's hosted servers.
+
+Workflow Steps:
+Trigger: You push code to the main branch.
+
+Environment Setup: GitHub spins up a temporary Ubuntu or Windows "Runner."
+
+Install Dependencies: It reads your requirements.txt and installs Flask, FPDF, etc.
+
+Linting/Static Analysis: It checks your Python code for syntax errors.
+
+Run Pytest: It executes your test_app.py. If tests fail, the build stops, and you see a red "X" on your commit.
+
+Deploy (Optional): If tests pass, it can automatically push the app to a cloud provider (like Heroku or AWS).
+
+2. Jenkins (The "Self-Hosted" Workflow)
+Jenkins is an automation server usually installed on your local machine or a private server. It is highly customizable via the Jenkinsfile.
+
+Workflow Steps:
+Poll SCM / Webhook: Jenkins detects a change in your local Git folder or GitHub repo.
+
+Build Stage: Jenkins creates a Virtual Environment (venv) on your computer.
+
+Test Stage: It sets the PYTHONPATH and runs pytest. It often generates a JUnit XML report to show a graph of test results.
+
+Artifact Archiving: Jenkins can "package" your app.py and database into a ZIP file or a Docker image for safekeeping.
+
+Post-Build: It sends an email or Slack notification if the ACEest app build failed.
