@@ -49,3 +49,6 @@ APP_V_1_1_0 app
 
 New Endpoint: 
 A new POST route, /save_client, was added in version 1.1 to handle saving or updating client information in the database. It includes logic to handle database conflicts using ON CONFLICT(name) DO UPDATE
+
+APP_V_1_1_2
+Added Client List, Progress Report
