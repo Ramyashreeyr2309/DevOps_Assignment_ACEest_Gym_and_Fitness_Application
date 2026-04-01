@@ -44,3 +44,6 @@ It performs the following steps:
 Sets up a Python 3.10 environment.
 Installs dependencies from app/requirements.txt.
 Executes pytest to ensure all functional tests pass before merging.
+
+APP_V_1_1_1
+New Endpoint: A new POST route, /save_client, was added in version 1.1 to handle saving or updating client information in the database. It includes logic to handle database conflicts using ON CONFLICT(name) DO UPDATE
