@@ -64,3 +64,6 @@ Added a new GET route, /get_progress, allowing the frontend to fetch and display
 
 APP_V2.2.4
 Transition from a simple information-display tool to a data-driven tracking system with automated calculations and API-oriented architecture.
+
+APP_V3.0.1
+comprehensive fitness management system with historical data logging.

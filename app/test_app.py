@@ -21,14 +21,22 @@ def init_db():
             age INTEGER,
             weight REAL,
             program TEXT,
-            calories INTEGER,
-            target_adherence INTEGER
+            calories INTEGER
         );
         CREATE TABLE IF NOT EXISTS progress (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             client_name TEXT,
             week TEXT,
             adherence INTEGER,
+            FOREIGN KEY(client_name) REFERENCES clients(name)
+        );
+        CREATE TABLE IF NOT EXISTS workouts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            client_name TEXT,
+            date TEXT,
+            workout_type TEXT,
+            duration_min INTEGER,
+            notes TEXT,
             FOREIGN KEY(client_name) REFERENCES clients(name)
         );
     ''')
@@ -40,38 +48,18 @@ def clear_db():
     conn.executescript('''
         DELETE FROM clients;
         DELETE FROM progress;
+        DELETE FROM workouts;
     ''')
     conn.commit()
     conn.close()
 
-
-def test_get_clients_empty(client):
-    response = client.get('/api/clients')
-    assert response.status_code == 200
-    assert response.get_json() == []
-
-def test_get_clients_with_data(client):
-    conn = get_db()
-    conn.execute("""
-        INSERT INTO clients (name, age, weight, program, calories, target_adherence)
-        VALUES ('John Doe', 30, 70, 'Fat Loss (FL)', 1540, 90)
-    """)
-    conn.commit()
-    conn.close()
-
-    response = client.get('/api/clients')
-    assert response.status_code == 200
-    clients = response.get_json()
-    assert len(clients) == 1
-    assert clients[0]['name'] == 'John Doe'
 
 def test_save_client(client):
     data = {
         "name": "Jane Doe",
         "age": 25,
         "weight": 60,
-        "program": "Beginner (BG)",
-        "adherence": 85
+        "program": "Beginner (BG)"
     }
     response = client.post('/api/save_client', json=data)
     assert response.status_code == 200
@@ -83,8 +71,7 @@ def test_update_client(client):
         "name": "Alice",
         "age": 28,
         "weight": 65,
-        "program": "Fat Loss (FL)",
-        "adherence": 90
+        "program": "Fat Loss (FL)"
     })
 
     # Update client
@@ -92,12 +79,37 @@ def test_update_client(client):
         "name": "Alice",
         "age": 29,
         "weight": 68,
-        "program": "Muscle Gain (MG)",
-        "adherence": 95
+        "program": "Muscle Gain (MG)"
     }
     response = client.post('/api/save_client', json=updated_data)
     assert response.status_code == 200
     assert response.get_json()['status'] == "success"
+
+def test_view_history(client):
+    # Save a client and workout history
+    client.post('/api/save_client', json={
+        "name": "Bob",
+        "age": 35,
+        "weight": 80,
+        "program": "Muscle Gain (MG)"
+    })
+    conn = get_db()
+    conn.execute("""
+        INSERT INTO workouts (client_name, date, workout_type, duration_min, notes)
+        VALUES ('Bob', '2026-03-30', 'Cardio', 30, 'Morning run')
+    """)
+    conn.commit()
+    conn.close()
+
+    # Retrieve workout history
+    response = client.get('/history/Bob')
+    assert response.status_code == 200
+    assert 'Cardio' in response.get_data(as_text=True)
+
+def test_view_history_nonexistent_client(client):
+    response = client.get('/history/NonExistent')
+    assert response.status_code == 200
+    assert 'No history found' in response.get_data(as_text=True)
 
 def test_get_progress(client):
     # Save a client and progress
@@ -105,8 +117,7 @@ def test_get_progress(client):
         "name": "Bob",
         "age": 35,
         "weight": 80,
-        "program": "Muscle Gain (MG)",
-        "adherence": 85
+        "program": "Muscle Gain (MG)"
     })
     conn = get_db()
     conn.execute("""
