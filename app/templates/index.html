@@ -1,83 +1,86 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>ACEest Fitness & Performance</title>
+    <title>ACEest Fitness & Performance v2</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body { background-color: #1a1a1a; color: white; font-family: Arial; margin: 0; }
-        .header { background: #d4af37; color: black; text-align: center; padding: 20px; font-size: 24px; font-weight: bold; }
+        .header { background: #d4af37; color: black; text-align: center; padding: 15px; font-size: 22px; font-weight: bold; }
         .main { display: flex; padding: 20px; gap: 20px; }
-        .left-panel { flex: 1; border: 2px solid #d4af37; padding: 20px; border-radius: 8px; }
+        .left-panel { flex: 1; border: 2px solid #d4af37; padding: 20px; border-radius: 8px; height: fit-content; }
         .right-panel { flex: 2; display: flex; flex-direction: column; gap: 15px; }
         .card { background: #111; border: 1px solid #d4af37; padding: 15px; border-radius: 5px; }
-        .card h3 { color: #d4af37; margin-top: 0; }
-        input, select { width: 100%; padding: 8px; margin: 10px 0; background: #333; color: white; border: 1px solid #555; }
+        input, select { width: 90%; padding: 8px; margin: 5px 0; background: #333; color: white; border: 1px solid #555; }
         button { width: 100%; padding: 10px; background: #d4af37; border: none; font-weight: bold; cursor: pointer; margin-top: 10px; }
-        .display-text { white-space: pre-line; min-height: 100px; }
-        #calorie-display { font-size: 1.2em; color: #d4af37; font-weight: bold; text-align: center; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; background: #222; }
+        th, td { border: 1px solid #444; padding: 8px; text-align: left; font-size: 13px; }
+        th { background-color: #d4af37; color: black; }
+        .chart-container { height: 250px; width: 100%; }
     </style>
 </head>
 <body>
 
-<div class="header">ACEest FUNCTIONAL FITNESS SYSTEM</div>
+<div class="header">ACEest FUNCTIONAL FITNESS SYSTEM v2</div>
 
 <div class="main">
     <div class="left-panel">
         <h3>Client Profile</h3>
         <input type="text" id="name" placeholder="Name">
         <input type="number" id="age" placeholder="Age">
-        <input type="number" id="weight" placeholder="Weight (kg)" oninput="updateCalculations()">
-        
-        <label>Program</label>
-        <select id="program" onchange="updateCalculations()">
+        <input type="number" id="weight" placeholder="Weight (kg)" oninput="updateUI()">
+        <select id="program" onchange="updateUI()">
             <option value="" disabled selected>Select Program</option>
             {% for name in programs %}
             <option value="{{ name }}">{{ name }}</option>
             {% endfor %}
         </select>
-
-        <label>Weekly Adherence (%)</label>
-        <input type="range" id="adherence" min="0" max="100" value="0">
-        <span id="adh-val">0%</span>
-
+        <label>Weekly Adherence: <span id="adh-val">0</span>%</label>
+        <input type="range" id="adherence" min="0" max="100" value="0" oninput="document.getElementById('adh-val').innerText=this.value">
+        
         <button onclick="saveClient()">Save Client</button>
-        <button style="background:#555; color:white;" onclick="location.reload()">Reset</button>
+        <button onclick="window.location.href='/export_csv'" style="background:#444; color:white;">Export CSV</button>
     </div>
 
     <div class="right-panel">
         <div class="card">
-            <h3>Weekly Training Plan</h3>
-            <div id="workout-box" class="display-text">Select program...</div>
+            <h4 style="color:#d4af37; margin:0;">Weekly Training & Diet</h4>
+            <div id="plan-display" style="white-space: pre-line; margin-top:10px;">Select a program to see details...</div>
+            <div id="calorie-display" style="margin-top:10px; color:#d4af37; font-weight:bold;">Estimated Calories: --</div>
         </div>
+
         <div class="card">
-            <h3>Nutrition Plan (TN Context)</h3>
-            <div id="diet-box" class="display-text">Select program...</div>
+            <h4 style="color:#d4af37; margin:0;">Client List</h4>
+            <table>
+                <thead><tr><th>Name</th><th>Program</th><th>Adherence</th></tr></thead>
+                <tbody>
+                    {% for client in clients %}
+                    <tr><td>{{ client.name }}</td><td>{{ client.program }}</td><td>{{ client.target_adherence }}%</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
-        <div id="calorie-display">Estimated Calories: --</div>
+
+        <div class="card">
+            <h4 style="color:#d4af37; margin:0;">Progress Chart</h4>
+            <div class="chart-container"><canvas id="progressChart"></canvas></div>
+        </div>
     </div>
 </div>
 
 <script>
-    // Embedded Program Data for instant UI updates
     const programs = {};
 
-    function updateCalculations() {
+    const clientData = [];
+
+    function updateUI() {
         const progName = document.getElementById('program').value;
         const weight = parseFloat(document.getElementById('weight').value) || 0;
         
         if (progName && programs[progName]) {
             const data = programs[progName];
-            
-            // Update Text
-            const workoutBox = document.getElementById('workout-box');
-            workoutBox.innerText = data.workout;
-            workoutBox.style.color = data.color;
-            
-            document.getElementById('diet-box').innerText = data.diet;
-
-            // Calculate Calories (weight * calorie_factor)
+            document.getElementById('plan-display').innerHTML = `<span style="color:${data.color}"><strong>Workout:</strong> ${data.workout}</span><br><strong>Diet:</strong> ${data.diet}`;
             if (weight > 0) {
-                const kcal = Math.round(weight * data.calorie_factor);
-                document.getElementById('calorie-display').innerText = `Estimated Calories: ${kcal} kcal`;
+                document.getElementById('calorie-display').innerText = `Estimated Calories: ${Math.round(weight * data.calorie_factor)} kcal`;
             }
         }
     }
@@ -90,12 +93,6 @@
             program: document.getElementById('program').value,
             adherence: document.getElementById('adherence').value
         };
-
-        if (!payload.name || !payload.program) {
-            alert("Please fill name and program");
-            return;
-        }
-
         const resp = await fetch('/save_client', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
@@ -103,12 +100,26 @@
         });
         const result = await resp.json();
         alert(result.message);
+        location.reload();
     }
 
-    document.getElementById('adherence').oninput = function() {
-        document.getElementById('adh-val').innerText = this.value + '%';
-    };
+    // Chart.js implementation for the Progress Chart 
+    const ctx = document.getElementById('progressChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: clientData.map(c => c.name),
+            datasets: [{
+                label: 'Adherence %',
+                data: clientData.map(c => c.adherence),
+                backgroundColor: '#d4af37'
+            }]
+        },
+        options: {
+            maintainAspectRatio: false,
+            scales: { y: { beginAtZero: true, max: 100 } }
+        }
+    });
 </script>
-
 </body>
 </html>
