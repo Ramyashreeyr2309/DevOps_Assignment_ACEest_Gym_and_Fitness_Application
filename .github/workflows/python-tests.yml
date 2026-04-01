@@ -1,0 +1,45 @@
+name: Python application testing
+
+on:
+  pull_request:
+    branches: [ "release" ]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.10"
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        if [ -f app/requirements.txt ]; then pip install -r app/requirements.txt; fi
+        pip install pytest
+
+    - name: Run tests with pytest
+      env:
+        PYTHONPATH: ${{ github.workspace }}/app
+      run: |
+        pytest app/test_app.py
+
+    - name: Set up Docker Buildx
+      # This step only runs if pytest succeeds
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build Docker Image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        # Uses the Dockerfile in your root to build the 'app' directory
+        file: ./dockerfile
+        push: false # Set to true and add credentials if pushing to a registry
+        tags: aceest-fitness-app:latest

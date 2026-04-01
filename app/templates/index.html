@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ACEest Fitness Web</title>
+    <style>
+        body { background-color: #1a1a1a; color: #fff; font-family: 'Segoe UI', sans-serif; margin: 0; }
+        .header { background-color: #d4af37; color: #000; padding: 20px; text-align: center; font-size: 24px; font-weight: bold; }
+        .container { display: flex; padding: 20px; gap: 20px; }
+        .sidebar { flex: 1; border: 1px solid #d4af37; padding: 15px; border-radius: 8px; }
+        .main-content { flex: 3; }
+        .card { background: #262626; border-left: 5px solid #d4af37; padding: 15px; margin-bottom: 15px; border-radius: 4px; }
+        select { width: 100%; padding: 10px; background: #333; color: #fff; border: 1px solid #d4af37; cursor: pointer; }
+        .metric-val { color: #d4af37; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="header">ACEest FUNCTIONAL FITNESS</div>
+
+<div class="container">
+    <div class="sidebar">
+        <h3>Program Selection</h3>
+        <select id="programSelect" onchange="loadProgramDetails()">
+            <option value="" disabled selected>Select a Program</option>
+            {% for program in programs %}
+            <option value="{{ program }}">{{ program }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="main-content">
+        <div class="card" id="workout-card">
+            <h3 style="color:#d4af37">Workout Plan</h3>
+            <div id="workout-data">Select a program to view details.</div>
+        </div>
+
+        <div class="card" id="diet-card">
+            <h3 style="color:#d4af37">Diet Plan</h3>
+            <div id="diet-data">Select a program to view details.</div>
+        </div>
+    </div>
+</div>
+
+<script>
+async function loadProgramDetails() {
+    const program = document.getElementById('programSelect').value;
+    const response = await fetch(`/get_program/${program}`);
+    const data = await response.json();
+
+    if (data.workout) {
+        document.getElementById('workout-data').innerText = data.workout;
+        document.getElementById('diet-data').innerText = data.diet;
+    } else {
+        document.getElementById('workout-data').innerText = "No data available.";
+        document.getElementById('diet-data').innerText = "No data available.";
+    }
+}
+</script>
+</body>
+</html>
