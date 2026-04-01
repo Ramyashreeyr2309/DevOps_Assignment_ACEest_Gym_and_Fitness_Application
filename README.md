@@ -49,3 +49,27 @@ APP_V_1_1_0 app
 
 New Endpoint: 
 A new POST route, /save_client, was added in version 1.1 to handle saving or updating client information in the database. It includes logic to handle database conflicts using ON CONFLICT(name) DO UPDATE
+
+APP_V_1_1_2
+Added Client List, Progress Report in website
+
+APP_V_2_0_1
+Introduces automatic calorie calculation logic
+
+APP_V_2_1_2
+Added new featues to code
+
+APP_V2.2.1
+Added a new GET route, /get_progress, allowing the frontend to fetch and display the history of a client's weekly adherence logs.
+
+APP_V2.2.4
+Transition from a simple information-display tool to a data-driven tracking system with automated calculations and API-oriented architecture.
+
+APP_V3.0.1
+comprehensive fitness management system with historical data logging.
+
+APP_V3.2.1
+data-tracking tool to a secure, "premium" fitness management system. The focus shifted heavily toward Security (Authentication) and Client Deliverables (PDF Reporting).
+
+APP_V3.3.1
+Added Features and final output

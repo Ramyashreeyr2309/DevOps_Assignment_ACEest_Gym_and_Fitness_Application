@@ -1,2 +1,15 @@
+# Web Framework
 Flask==3.0.3
+Werkzeug==3.0.3
+
+# Authentication & Session Management
+Flask-Login==0.6.3
+
+# PDF Export Functionality
+fpdf==1.7.2
+
+# Testing (Required for Jenkins/CI pipelines)
 pytest==8.3.3
+
+# Optional: Database (sqlite3 is built-in, but these are good for environments)
+# pysqlite3-binary==0.4.7

@@ -1,114 +1,129 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>ACEest Fitness & Performance</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ACEest Fitness & Performance | Elite Coaching</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700&display=swap" rel="stylesheet">
     <style>
-        body { background-color: #1a1a1a; color: white; font-family: Arial; margin: 0; }
-        .header { background: #d4af37; color: black; text-align: center; padding: 20px; font-size: 24px; font-weight: bold; }
-        .main { display: flex; padding: 20px; gap: 20px; }
-        .left-panel { flex: 1; border: 2px solid #d4af37; padding: 20px; border-radius: 8px; }
-        .right-panel { flex: 2; display: flex; flex-direction: column; gap: 15px; }
-        .card { background: #111; border: 1px solid #d4af37; padding: 15px; border-radius: 5px; }
-        .card h3 { color: #d4af37; margin-top: 0; }
-        input, select { width: 100%; padding: 8px; margin: 10px 0; background: #333; color: white; border: 1px solid #555; }
-        button { width: 100%; padding: 10px; background: #d4af37; border: none; font-weight: bold; cursor: pointer; margin-top: 10px; }
-        .display-text { white-space: pre-line; min-height: 100px; }
-        #calorie-display { font-size: 1.2em; color: #d4af37; font-weight: bold; text-align: center; }
+        /* Landing Page Specific Styles */
+        body {
+            display: block; /* Override the flex layout from style.css for landing page */
+            overflow-x: hidden;
+        }
+        .hero {
+            height: 100vh;
+            background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.9)), 
+                        url('https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&q=80');
+            background-size: cover;
+            background-position: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 20px;
+        }
+        .hero h1 {
+            font-size: clamp(40px, 8vw, 80px);
+            color: var(--gold);
+            letter-spacing: 10px;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+        .hero p {
+            font-size: 18px;
+            color: #ccc;
+            max-width: 600px;
+            margin-bottom: 30px;
+            letter-spacing: 1px;
+        }
+        .nav-top {
+            position: absolute;
+            top: 0;
+            width: 100%;
+            padding: 30px 50px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10;
+        }
+        .cta-button {
+            background: var(--gold);
+            color: #000;
+            padding: 15px 40px;
+            text-decoration: none;
+            font-weight: 700;
+            border-radius: 5px;
+            text-transform: uppercase;
+            transition: all 0.3s ease;
+        }
+        .cta-button:hover {
+            background: #fff;
+            transform: scale(1.05);
+        }
+        .features {
+            padding: 100px 10%;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 40px;
+            background: #0a0a0a;
+        }
+        .feature-item h3 {
+            color: var(--gold);
+            margin-bottom: 15px;
+            font-size: 20px;
+        }
+        .feature-item p {
+            color: #888;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
 
-<div class="header">ACEest FUNCTIONAL FITNESS SYSTEM</div>
-
-<div class="main">
-    <div class="left-panel">
-        <h3>Client Profile</h3>
-        <input type="text" id="name" placeholder="Name">
-        <input type="number" id="age" placeholder="Age">
-        <input type="number" id="weight" placeholder="Weight (kg)" oninput="updateCalculations()">
-        
-        <label>Program</label>
-        <select id="program" onchange="updateCalculations()">
-            <option value="" disabled selected>Select Program</option>
-            {% for name in programs %}
-            <option value="{{ name }}">{{ name }}</option>
-            {% endfor %}
-        </select>
-
-        <label>Weekly Adherence (%)</label>
-        <input type="range" id="adherence" min="0" max="100" value="0">
-        <span id="adh-val">0%</span>
-
-        <button onclick="saveClient()">Save Client</button>
-        <button style="background:#555; color:white;" onclick="location.reload()">Reset</button>
-    </div>
-
-    <div class="right-panel">
-        <div class="card">
-            <h3>Weekly Training Plan</h3>
-            <div id="workout-box" class="display-text">Select program...</div>
+    <nav class="nav-top">
+        <div class="brand-logo" style="color: var(--gold); font-weight: 700; font-size: 24px; letter-spacing: 3px;">ACEest</div>
+        <div>
+            {% if current_user.is_authenticated %}
+                <a href="{{ url_for('dashboard') }}" class="cta-button" style="padding: 10px 20px; font-size: 12px;">Go to Dashboard</a>
+            {% else %}
+                <a href="{{ url_for('login') }}" class="cta-button" style="padding: 10px 20px; font-size: 12px;">Client Login</a>
+            {% endif %}
         </div>
-        <div class="card">
-            <h3>Nutrition Plan (TN Context)</h3>
-            <div id="diet-box" class="display-text">Select program...</div>
-        </div>
-        <div id="calorie-display">Estimated Calories: --</div>
-    </div>
-</div>
+    </nav>
 
-<script>
-    // Embedded Program Data for instant UI updates
-    const programs = {};
-
-    function updateCalculations() {
-        const progName = document.getElementById('program').value;
-        const weight = parseFloat(document.getElementById('weight').value) || 0;
+    <section class="hero">
+        <p style="color: var(--gold); font-weight: 700; margin-bottom: 0;">ESTABLISHED 2024</p>
+        <h1>ACEest</h1>
+        <p>Advanced Coaching & Exercise Science Tracking. A data-driven approach to elite fitness and performance optimization.</p>
         
-        if (progName && programs[progName]) {
-            const data = programs[progName];
-            
-            // Update Text
-            const workoutBox = document.getElementById('workout-box');
-            workoutBox.innerText = data.workout;
-            workoutBox.style.color = data.color;
-            
-            document.getElementById('diet-box').innerText = data.diet;
+        {% if not current_user.is_authenticated %}
+            <a href="{{ url_for('login') }}" class="cta-button">Initialize Performance Portal</a>
+        {% else %}
+            <a href="{{ url_for('dashboard') }}" class="cta-button">Resume Training</a>
+        {% endif %}
+    </section>
 
-            // Calculate Calories (weight * calorie_factor)
-            if (weight > 0) {
-                const kcal = Math.round(weight * data.calorie_factor);
-                document.getElementById('calorie-display').innerText = `Estimated Calories: ${kcal} kcal`;
-            }
-        }
-    }
+    <section class="features">
+        <div class="feature-item">
+            <h3>AI Program Generation</h3>
+            <p>Our v3.2.4 algorithm generates specific daily workout routines tailored to your Fat Loss or Muscle Gain goals.</p>
+        </div>
+        <div class="feature-item">
+            <h3>Biometric Analytics</h3>
+            <p>Real-time tracking of weight, body fat, and adherence metrics with interactive visual progress charting.</p>
+        </div>
+        <div class="feature-item">
+            <h3>Secure Infrastructure</h3>
+            <p>Role-based access control ensuring your performance data is handled with professional-grade security.</p>
+        </div>
+    </section>
 
-    async function saveClient() {
-        const payload = {
-            name: document.getElementById('name').value,
-            age: document.getElementById('age').value,
-            weight: document.getElementById('weight').value,
-            program: document.getElementById('program').value,
-            adherence: document.getElementById('adherence').value
-        };
-
-        if (!payload.name || !payload.program) {
-            alert("Please fill name and program");
-            return;
-        }
-
-        const resp = await fetch('/save_client', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(payload)
-        });
-        const result = await resp.json();
-        alert(result.message);
-    }
-
-    document.getElementById('adherence').oninput = function() {
-        document.getElementById('adh-val').innerText = this.value + '%';
-    };
-</script>
+    <footer style="text-align: center; padding: 50px; background: #000; border-top: 1px solid #222;">
+        <p style="color: #444; font-size: 12px; letter-spacing: 2px;">&copy; 2026 ACEEST PERFORMANCE PORTAL v3.2.4</p>
+    </footer>
 
 </body>
 </html>
