@@ -1,60 +1,114 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>ACEest Fitness Web</title>
+    <title>ACEest Fitness & Performance</title>
     <style>
-        body { background-color: #1a1a1a; color: #fff; font-family: 'Segoe UI', sans-serif; margin: 0; }
-        .header { background-color: #d4af37; color: #000; padding: 20px; text-align: center; font-size: 24px; font-weight: bold; }
-        .container { display: flex; padding: 20px; gap: 20px; }
-        .sidebar { flex: 1; border: 1px solid #d4af37; padding: 15px; border-radius: 8px; }
-        .main-content { flex: 3; }
-        .card { background: #262626; border-left: 5px solid #d4af37; padding: 15px; margin-bottom: 15px; border-radius: 4px; }
-        select { width: 100%; padding: 10px; background: #333; color: #fff; border: 1px solid #d4af37; cursor: pointer; }
-        .metric-val { color: #d4af37; font-weight: bold; }
+        body { background-color: #1a1a1a; color: white; font-family: Arial; margin: 0; }
+        .header { background: #d4af37; color: black; text-align: center; padding: 20px; font-size: 24px; font-weight: bold; }
+        .main { display: flex; padding: 20px; gap: 20px; }
+        .left-panel { flex: 1; border: 2px solid #d4af37; padding: 20px; border-radius: 8px; }
+        .right-panel { flex: 2; display: flex; flex-direction: column; gap: 15px; }
+        .card { background: #111; border: 1px solid #d4af37; padding: 15px; border-radius: 5px; }
+        .card h3 { color: #d4af37; margin-top: 0; }
+        input, select { width: 100%; padding: 8px; margin: 10px 0; background: #333; color: white; border: 1px solid #555; }
+        button { width: 100%; padding: 10px; background: #d4af37; border: none; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        .display-text { white-space: pre-line; min-height: 100px; }
+        #calorie-display { font-size: 1.2em; color: #d4af37; font-weight: bold; text-align: center; }
     </style>
 </head>
 <body>
 
-<div class="header">ACEest FUNCTIONAL FITNESS</div>
+<div class="header">ACEest FUNCTIONAL FITNESS SYSTEM</div>
 
-<div class="container">
-    <div class="sidebar">
-        <h3>Program Selection</h3>
-        <select id="programSelect" onchange="loadProgramDetails()">
-            <option value="" disabled selected>Select a Program</option>
-            {% for program in programs %}
-            <option value="{{ program }}">{{ program }}</option>
+<div class="main">
+    <div class="left-panel">
+        <h3>Client Profile</h3>
+        <input type="text" id="name" placeholder="Name">
+        <input type="number" id="age" placeholder="Age">
+        <input type="number" id="weight" placeholder="Weight (kg)" oninput="updateCalculations()">
+        
+        <label>Program</label>
+        <select id="program" onchange="updateCalculations()">
+            <option value="" disabled selected>Select Program</option>
+            {% for name in programs %}
+            <option value="{{ name }}">{{ name }}</option>
             {% endfor %}
         </select>
+
+        <label>Weekly Adherence (%)</label>
+        <input type="range" id="adherence" min="0" max="100" value="0">
+        <span id="adh-val">0%</span>
+
+        <button onclick="saveClient()">Save Client</button>
+        <button style="background:#555; color:white;" onclick="location.reload()">Reset</button>
     </div>
 
-    <div class="main-content">
-        <div class="card" id="workout-card">
-            <h3 style="color:#d4af37">Workout Plan</h3>
-            <div id="workout-data">Select a program to view details.</div>
+    <div class="right-panel">
+        <div class="card">
+            <h3>Weekly Training Plan</h3>
+            <div id="workout-box" class="display-text">Select program...</div>
         </div>
-
-        <div class="card" id="diet-card">
-            <h3 style="color:#d4af37">Diet Plan</h3>
-            <div id="diet-data">Select a program to view details.</div>
+        <div class="card">
+            <h3>Nutrition Plan (TN Context)</h3>
+            <div id="diet-box" class="display-text">Select program...</div>
         </div>
+        <div id="calorie-display">Estimated Calories: --</div>
     </div>
 </div>
 
 <script>
-async function loadProgramDetails() {
-    const program = document.getElementById('programSelect').value;
-    const response = await fetch(`/get_program/${program}`);
-    const data = await response.json();
+    // Embedded Program Data for instant UI updates
+    const programs = {};
 
-    if (data.workout) {
-        document.getElementById('workout-data').innerText = data.workout;
-        document.getElementById('diet-data').innerText = data.diet;
-    } else {
-        document.getElementById('workout-data').innerText = "No data available.";
-        document.getElementById('diet-data').innerText = "No data available.";
+    function updateCalculations() {
+        const progName = document.getElementById('program').value;
+        const weight = parseFloat(document.getElementById('weight').value) || 0;
+        
+        if (progName && programs[progName]) {
+            const data = programs[progName];
+            
+            // Update Text
+            const workoutBox = document.getElementById('workout-box');
+            workoutBox.innerText = data.workout;
+            workoutBox.style.color = data.color;
+            
+            document.getElementById('diet-box').innerText = data.diet;
+
+            // Calculate Calories (weight * calorie_factor)
+            if (weight > 0) {
+                const kcal = Math.round(weight * data.calorie_factor);
+                document.getElementById('calorie-display').innerText = `Estimated Calories: ${kcal} kcal`;
+            }
+        }
     }
-}
+
+    async function saveClient() {
+        const payload = {
+            name: document.getElementById('name').value,
+            age: document.getElementById('age').value,
+            weight: document.getElementById('weight').value,
+            program: document.getElementById('program').value,
+            adherence: document.getElementById('adherence').value
+        };
+
+        if (!payload.name || !payload.program) {
+            alert("Please fill name and program");
+            return;
+        }
+
+        const resp = await fetch('/save_client', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+        });
+        const result = await resp.json();
+        alert(result.message);
+    }
+
+    document.getElementById('adherence').oninput = function() {
+        document.getElementById('adh-val').innerText = this.value + '%';
+    };
 </script>
+
 </body>
 </html>
