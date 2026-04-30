@@ -16,6 +16,6 @@ spec:
     spec:
       containers:
       - name: fitness-container
-        image: yourdockerhub/aceest-fitness-app:latest
+        image: 2024tm93612/aceest-fitness-app:latest
         ports:
         - containerPort: 5000
