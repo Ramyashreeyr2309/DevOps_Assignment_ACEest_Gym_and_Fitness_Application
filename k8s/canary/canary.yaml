@@ -1,0 +1,22 @@
+# k8s/canary/canary.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fitness-app-canary
+spec:
+  replicas: 1   # 10% traffic
+  selector:
+    matchLabels:
+      app: fitness
+      version: canary
+  template:
+    metadata:
+      labels:
+        app: fitness
+        version: canary
+    spec:
+      containers:
+      - name: fitness-container
+        image: 2024tm93612/aceest-fitness-app:release-41
+        ports:
+        - containerPort: 5000
