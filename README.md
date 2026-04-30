@@ -148,3 +148,5 @@ Test Stage: It sets the PYTHONPATH and runs pytest. It often generates a JUnit X
 Artifact Archiving: Jenkins can "package" your app.py and database into a ZIP file or a Docker image for safekeeping.
 
 Post-Build: It sends an email or Slack notification if the ACEest app build failed.
+
+Added basic deployment using minikube
