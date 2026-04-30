@@ -1,21 +1,22 @@
+# k8s/shadow/stable.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: fitness-app-blue
+  name: fitness-app-stable
 spec:
   replicas: 2
   selector:
     matchLabels:
       app: fitness
-      version: blue
+      version: stable
   template:
     metadata:
       labels:
         app: fitness
-        version: blue
+        version: stable
     spec:
       containers:
       - name: fitness-container
-        image: 2024tm93612/aceest-fitness-app:release-39
+        image: 2024tm93612/aceest-fitness-app:release-38
         ports:
         - containerPort: 5000

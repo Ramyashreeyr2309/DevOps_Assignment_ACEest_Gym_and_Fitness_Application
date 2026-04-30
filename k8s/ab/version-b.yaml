@@ -1,18 +1,19 @@
+# k8s/ab/version-b.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: fitness-app-blue
+  name: fitness-app-v2
 spec:
   replicas: 2
   selector:
     matchLabels:
       app: fitness
-      version: blue
+      version: v2
   template:
     metadata:
       labels:
         app: fitness
-        version: blue
+        version: v2
     spec:
       containers:
       - name: fitness-container

@@ -1,3 +1,4 @@
+# k8s/shadow/service.yaml
 apiVersion: v1
 kind: Service
 metadata:
@@ -6,7 +7,7 @@ spec:
   type: NodePort
   selector:
     app: fitness
-    version: blue   
+    version: stable   # 👈 ONLY stable serves users
   ports:
     - port: 80
       targetPort: 5000

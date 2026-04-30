@@ -1,0 +1,118 @@
+pipeline {
+    agent any
+
+    parameters {
+        string(name: 'GIT_REF', defaultValue: 'release', description: 'Branch or Tag to build')
+    }
+
+    environment {
+        IMAGE_NAME = "2024tm93612/aceest-fitness-app"   
+        IMAGE_TAG = "${params.GIT_REF}-${BUILD_NUMBER}"
+    }
+
+    stages {
+
+        stage('Checkout') {
+            steps {
+                git branch: "${params.GIT_REF}", url: 'https://github.com/Ramyashreeyr2309/DevOps_Assignment_ACEest_Gym_and_Fitness_Application.git'
+            }
+        }
+
+        stage('Setup Environment & Run Tests') {
+            steps {
+                bat """
+                    if not exist venv (
+                        python -m venv venv
+                    )
+
+                    call venv\\Scripts\\activate
+                    python -m pip install --upgrade pip
+                    pip install -r app\\requirements.txt
+
+                    set PYTHONPATH=%CD%\\app
+                    copy /Y app\\aceest_fitness.db aceest_fitness.db
+                    python -m pytest app/test_app.py
+                """
+            }
+        }
+        
+        stage('SonarQube Analysis') {
+    steps {
+        script {
+            def scannerHome = tool 'sonar-scanner'
+            withSonarQubeEnv('sonarqube') {
+                bat """
+                    "${scannerHome}\\bin\\sonar-scanner.bat" ^
+                    -Dsonar.projectKey=aceest-fitness ^
+                    -Dsonar.sources=app ^
+                    -Dsonar.host.url=http://localhost:9000 ^
+                    -Dsonar.login=%SONAR_AUTH_TOKEN%
+                """
+            }
+        }
+    }
+}
+
+stage('Check Sonar Scanner') {
+    steps {
+        script {
+            def scannerHome = tool 'sonar-scanner'
+            bat "dir ${scannerHome}\\bin"
+        }
+    }
+}
+
+        stage('Test Docker') {
+            steps {
+                bat 'docker ps'
+            }
+        }
+        stage('Check Files') {
+        steps {
+        bat 'dir /s *.yaml'
+    }
+}
+
+        stage('Build Docker Image') {
+            steps {
+                bat "docker build -t %IMAGE_NAME%:%IMAGE_TAG% ."
+            }
+        }
+
+        stage('Push to Docker Hub') {
+            steps {
+                withDockerRegistry([credentialsId: 'dockerhub-creds', url: 'https://index.docker.io/v1/']) {
+                bat "docker push %IMAGE_NAME%:%IMAGE_TAG%"
+                }
+            }
+        }
+        stage('Test Kubernetes Access') {
+            steps {
+                bat 'kubectl config view'
+                bat 'kubectl get nodes'
+                }
+        }
+        stage('Deploy to Minikube (Kubernetes)') {
+            steps {
+                bat """
+                    echo Updating Kubernetes deployment...
+
+                    kubectl set image deployment/fitness-app fitness-container=%IMAGE_NAME%:%IMAGE_TAG%
+                    IF %ERRORLEVEL% NEQ 0 (
+                    kubectl apply -f k8s\\base\\deployment.yaml)
+
+                    kubectl apply -f k8s\\base\\service.yaml
+                """
+            }
+        }
+
+        stage('Verify Deployment') {
+            steps {
+                bat """
+                    kubectl get pods
+                    kubectl get services
+                """
+            }
+        }
+    }
+}
