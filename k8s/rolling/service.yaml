@@ -1,0 +1,13 @@
+# k8s/rolling/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: fitness-service
+spec:
+  type: NodePort
+  selector:
+    app: fitness
+  ports:
+    - port: 80
+      targetPort: 5000
+      nodePort: 30007
