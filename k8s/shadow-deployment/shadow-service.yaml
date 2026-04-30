@@ -1,0 +1,12 @@
+# k8s/shadow/shadow-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: fitness-shadow-service
+spec:
+  selector:
+    app: fitness
+    version: shadow
+  ports:
+    - port: 5000
+      targetPort: 5000

@@ -1,0 +1,22 @@
+# k8s/shadow/shadow.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fitness-app-shadow
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fitness
+      version: shadow
+  template:
+    metadata:
+      labels:
+        app: fitness
+        version: shadow
+    spec:
+      containers:
+      - name: fitness-container
+        image: 2024tm93612/aceest-fitness-app:release-39
+        ports:
+        - containerPort: 5000
