@@ -16,6 +16,6 @@ spec:
     spec:
       containers:
       - name: fitness-container
-        image: 2024tm93612/aceest-fitness-app:release-40
+        image: 2024tm93612/aceest-fitness-app:release-39
         ports:
         - containerPort: 5000
