@@ -1,0 +1,25 @@
+# k8s/rolling/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fitness-app
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1   # 1 pod can go down
+      maxSurge: 1         # 1 extra pod allowed
+  selector:
+    matchLabels:
+      app: fitness
+  template:
+    metadata:
+      labels:
+        app: fitness
+    spec:
+      containers:
+      - name: fitness-container
+        image: 2024tm93612/aceest-fitness-app:release-38
+        ports:
+        - containerPort: 5000
